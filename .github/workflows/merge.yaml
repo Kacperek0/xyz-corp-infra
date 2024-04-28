@@ -1,0 +1,45 @@
+name: "Apply infrastructure changes"
+on:
+    pull_request:
+        types:
+            - closed
+
+jobs:
+    Plan:
+        name: Plan infrastructure
+        runs-on: ubuntu-latest
+        env:
+            ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+            ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+            ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+            ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v3
+
+            - name: Setup Terraform
+              uses: hashicorp/setup-terraform@v2
+
+            - name: Terraform init
+              run: terraform init
+              working-directory: ./azure
+
+            - name: Terraform fmt
+              run: |
+                terraform fmt --check
+              working-directory: ./azure
+
+            - name: Terraform validate
+              run: terraform validate
+              working-directory: ./azure
+
+            - name: Terraform plan
+              run: |
+                terraform plan \
+                --var-file variables/modelkit.tfvars \
+                --out tfplan
+              working-directory: ./azure
+
+            - name: Terraform apply
+              run: terraform apply tfplan
+              working-directory: ./azure
